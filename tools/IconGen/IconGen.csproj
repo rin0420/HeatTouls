@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net9.0</TargetFramework>
+    <RootNamespace>HeatTouls.IconGen</RootNamespace>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- 配色はアプリ本体と同じ定義を使う (二重管理しない) -->
+    <Compile Include="..\..\src\HeatTouls\Core\Palette.cs" Link="Palette.cs" />
+  </ItemGroup>
+
+</Project>

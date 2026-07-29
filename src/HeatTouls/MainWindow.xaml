@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Window
+    x:Class="HeatTouls.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <Grid x:Name="Root" Padding="18,16,18,16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- 左にタブ、右に期間の切り替え。中身はコード側で組み立てる。 -->
+        <Grid x:Name="Header" Margin="0,0,0,14">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <ContentControl x:Name="TabHost" Grid.Column="0" HorizontalAlignment="Left" />
+            <ContentControl x:Name="RangeHost" Grid.Column="1" HorizontalAlignment="Right" />
+        </Grid>
+
+        <Grid x:Name="PageHost" Grid.Row="1" />
+    </Grid>
+</Window>

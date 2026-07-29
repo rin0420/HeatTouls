@@ -1,0 +1,6 @@
+# タスクトレイ常駐に必要(GUI本体はPython標準のtkinterのみで動く)
+pystray>=0.19
+Pillow>=10.0
+
+# exeをビルドする場合のみ必要 (python build.py)
+pyinstaller>=6.0
