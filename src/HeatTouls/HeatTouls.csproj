@@ -6,6 +6,10 @@
     <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
     <RootNamespace>HeatTouls</RootNamespace>
     <AssemblyName>HeatTouls</AssemblyName>
+    <Product>HeatTouls</Product>
+    <!-- ベータ。ファイルバージョンは数値しか持てないので、-beta は InformationalVersion 側に置く。 -->
+    <Version>0.1.0</Version>
+    <InformationalVersion>0.1.0-beta</InformationalVersion>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>Assets\HeatTouls.ico</ApplicationIcon>
     <Platforms>x64;ARM64</Platforms>
