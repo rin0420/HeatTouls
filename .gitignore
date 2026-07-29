@@ -4,10 +4,6 @@ obj/
 dist/
 build/
 
-# Python (旧実装のキャッシュ)
-__pycache__/
-*.py[cod]
-
 # ローカル設定
 *.user
 .vs/

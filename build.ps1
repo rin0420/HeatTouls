@@ -31,9 +31,6 @@ if (-not $SkipIcon) {
     Write-Host 'アイコンを生成しています...'
     dotnet run --project $iconTool -c Release -- $icon
     if ($LASTEXITCODE -ne 0) { throw 'アイコンの生成に失敗しました。' }
-
-    # 配布物と同じアイコンをリポジトリの assets にも置いておく
-    Copy-Item $icon (Join-Path $root 'assets\HeatTouls.ico') -Force
 }
 
 if (Test-Path $outDir) {

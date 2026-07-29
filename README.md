@@ -131,18 +131,6 @@ dotnet run --project src\HeatTouls -- --db <PATH>     # 使用するDBファイ�
 ヒートマップと時間帯別グラフは [Win2D](https://github.com/microsoft/Win2D) で直接描き、
 角丸カードやバーは WinUI の `Border` にそのまま任せている。
 
-### Python 版について
-
-このアプリは元々 Python + tkinter で書かれていて、そのソースも
-[main.py](main.py) / [heattouls/](heattouls/) にそのまま残してある。
-DBスキーマも保存先も同じなので、**どちらを起動しても同じ `usage.db` を読み書きする**
-（ただし二重に起動すると同じ時間を二重計上するので、常用するのはどちらか一方にする）。
-
-```powershell
-python -m pip install -r requirements.txt
-python main.py --demo
-```
-
 ## 調整できる値
 
 [src/HeatTouls/Core/Config.cs](src/HeatTouls/Core/Config.cs) の定数:
