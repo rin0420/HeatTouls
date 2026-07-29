@@ -49,12 +49,19 @@ Windows 11 / .NET 9 + WinUI 3 で動作。
 | 30日 | 3行 × 10列 |
 | すべて | 7行 × 幅いっぱい |
 
-## 起動する（推奨）
+## 使う（推奨）
 
-[dist/HeatTouls/HeatTouls.exe](dist/HeatTouls/HeatTouls.exe) を**ダブルクリックするだけ**で動く。
-.NET ランタイムも Windows App SDK も同梱しているので、利用者側のインストールは不要。
+[Releases](https://github.com/rin0420/HeatTouls/releases/latest) から
+`HeatTouls-win-x64.zip` をダウンロードして展開し、`HeatTouls.exe` を
+**ダブルクリックするだけ**で動く。.NET ランタイムも Windows App SDK も同梱しているので、
+利用者側のインストールは一切不要。
 
-exe を作り直すには [.NET 9 SDK](https://dotnet.microsoft.com/download) を入れて:
+署名していないので、初回起動時に SmartScreen の警告が出ることがある
+（「詳細情報」→「実行」で起動できる）。
+
+## 自分でビルドする
+
+[.NET 9 SDK](https://dotnet.microsoft.com/download) を入れて:
 
 ```powershell
 .\build.ps1                      # dist\HeatTouls\HeatTouls.exe
@@ -154,3 +161,7 @@ dotnet run --project src\HeatTouls -- --db <PATH>     # 使用するDBファイ�
 - 「アクティブ時間」＝前面ウィンドウの時間。バックグラウンドで動いているだけのアプリは計上されない
 - 管理者権限で動いているアプリはパスを取得できず、記録されないことがある
 - スリープ復帰直後の1区間は計上せず、セッションを切る
+
+## ライセンス
+
+[MIT License](LICENSE)
