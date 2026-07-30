@@ -5,7 +5,7 @@
 PC で使ったアプリの **アクティブ時間** を自動で計測し、ヒートマップに可視化する
 Windows 常駐ツールです。計測対象を登録する必要はなく、前面に出たアプリが自動で一覧に増えていきます。
 
-Windows 11 / .NET 9 + WinUI 3。
+Windows 11 / .NET 11 + WinUI 3。
 
 ![ホーム](docs/home.png)
 
@@ -57,7 +57,14 @@ Windows 11 / .NET 9 + WinUI 3。
 
 ## 自分でビルドする
 
-[.NET 9 SDK](https://dotnet.microsoft.com/download) だけあればビルドできます（Visual Studio は不要）。
+[.NET 11 SDK](https://dotnet.microsoft.com/download) だけあればビルドできます（Visual Studio は不要）。
+.NET 11 はまだプレビュー版です（`11.0.100-preview.6` で確認）。未導入の場合は次で入ります。
+
+```powershell
+& ([scriptblock]::Create((irm https://dot.net/v1/dotnet-install.ps1))) -Channel 11.0 -Quality preview
+```
+
+`build.ps1` は PATH 上の dotnet が古い場合、`%USERPROFILE%\.dotnet` の SDK を自動で使います。
 
 ```powershell
 .\build.ps1                      # dist\HeatTouls\HeatTouls.exe
@@ -77,6 +84,6 @@ dotnet run --project src\HeatTouls -- --demo          # サンプルデータで
 ## 制限
 
 - Windows専用（Win32 APIを直接使うため）
-- 配布物はフォルダ形式（約 218MB）。WinUI 3 は多数のネイティブDLLを伴うため単一 exe にできない
+- 配布物はフォルダ形式（約 224MB）。WinUI 3 は多数のネイティブDLLを伴うため単一 exe にできない
 - 「アクティブ時間」＝前面ウィンドウの時間。バックグラウンドで動いているだけのアプリは計上されない
 - 管理者権限で動いているアプリはパスを取得できず、記録されないことがある
