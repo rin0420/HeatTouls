@@ -32,7 +32,20 @@
 
     <!-- CLI 引数を自前で捌くため、XAML が生成する Main は使わない (Program.cs) -->
     <DefineConstants>$(DefineConstants);DISABLE_XAML_GENERATED_MAIN</DefineConstants>
+
+    <!-- トレイに常駐しっぱなしなので、スループットより占有量を優先する。ワークステーション
+         GC は既定だが、バックグラウンド GC は見えないポーズを縮めるためだけに予備ヒープと
+         スレッドを保持し続ける。TieredPGO の計測用メモリも同様に割に合わない。 -->
+    <ServerGarbageCollection>false</ServerGarbageCollection>
+    <ConcurrentGarbageCollection>false</ConcurrentGarbageCollection>
+    <RetainVMGarbageCollection>false</RetainVMGarbageCollection>
+    <TieredPGO>false</TieredPGO>
   </PropertyGroup>
+
+  <ItemGroup>
+    <!-- GC 時間を少し払ってヒープを小さく保つ。常駐アプリではこの方が釣り合う。 -->
+    <RuntimeHostConfigurationOption Include="System.GC.Conserve" Value="5" Trim="false" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.8.260710003" />

@@ -158,7 +158,39 @@ public sealed partial class MainWindow : Window
         Refresh();
     }
 
-    public void HideDashboard() => AppWindow.Hide();
+    public void HideDashboard()
+    {
+        AppWindow.Hide();
+        ReleaseContent();
+    }
+
+    /// <summary>
+    /// Drops everything the dashboard built and gives the memory back.
+    ///
+    /// Hiding a window keeps its whole visual tree alive, and here that tree is one Win2D
+    /// CanvasControl — with its own swap chain — per tracked app. None of it is worth holding
+    /// while the app sits in the tray; ShowDashboard calls Refresh, which rebuilds it.
+    /// </summary>
+    private void ReleaseContent()
+    {
+        try
+        {
+            _homeBody.Children.Clear();
+            _appRows.Children.Clear();
+
+            // Refresh skips rebuilding when the signature is unchanged, so it has to be cleared
+            // or the dashboard would come back empty.
+            _homeSignature = null;
+            _appsSignature = null;
+            _overviewSignature = null;
+        }
+        catch (Exception)
+        {
+            // Tearing down the dashboard must never take the tracker down with it.
+        }
+
+        MemoryTrim.Release();
+    }
 
     /// <summary>App.Quit から呼ばれる後始末。</summary>
     public void Shutdown()
