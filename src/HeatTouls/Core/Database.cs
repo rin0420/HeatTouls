@@ -75,6 +75,14 @@ public sealed class Database : IDisposable
         Execute(conn, "PRAGMA journal_mode=WAL");
         Execute(conn, "PRAGMA synchronous=NORMAL");
         Execute(conn, "PRAGMA busy_timeout=10000");
+
+        // 20秒ごとの書き出しは毎回ほぼ同じページを書き換えるので、WALは中身の
+        // 割に膨らみやすい。既定のまま(1000ページ)だと、本体が100KBに満たない
+        // うちからWALだけ4MBに達する。しかも既定ではチェックポイント後に巻き戻す
+        // だけでファイルを切り詰めないため、一度伸びた4MBが居座り続ける。
+        // 早めにチェックポイントし、そのあと切り詰めさせる。
+        Execute(conn, "PRAGMA wal_autocheckpoint=200");
+        Execute(conn, "PRAGMA journal_size_limit=524288");
         Execute(conn, Schema);
         return new Database(conn);
     }
