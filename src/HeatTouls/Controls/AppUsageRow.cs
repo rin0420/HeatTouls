@@ -11,8 +11,15 @@ public sealed class AppUsageRow : UserControl
 {
     private const double Pad = 13;
 
+    private readonly Grid _track;
+    private readonly TextBlock _duration;
+    private readonly TextBlock _sessions;
+
+    private AppUsage _app;
+
     public AppUsageRow(AppUsage app, double peak, int? rank = null, Action<AppUsage>? onClick = null)
     {
+        _app = app;
         var color = Theme.AppAccent(app.Name);
         var grid = new Grid
         {
@@ -53,8 +60,8 @@ public sealed class AppUsageRow : UserControl
         grid.Children.Add(dot);
 
         // 名前とバーを縦に積む。バーの長さは一番使っているアプリを 1.0 とした比率。
-        var ratio = Math.Max(0.02, Math.Min(1.0, app.Seconds / Math.Max(peak, 1.0)));
-        var track = new Grid
+        var ratio = Ratio(app.Seconds, peak);
+        _track = new Grid
         {
             Height = 5,
             CornerRadius = new CornerRadius(2.5),
@@ -72,7 +79,7 @@ public sealed class AppUsageRow : UserControl
             Background = new SolidColorBrush(color),
         };
         Grid.SetColumn(fill, 0);
-        track.Children.Add(fill);
+        _track.Children.Add(fill);
 
         var main = new StackPanel
         {
@@ -87,37 +94,36 @@ public sealed class AppUsageRow : UserControl
                     Foreground = Theme.TextBrush,
                     TextTrimming = TextTrimming.CharacterEllipsis,
                 },
-                track,
+                _track,
             },
         };
         Grid.SetColumn(main, 2);
         grid.Children.Add(main);
 
+        _duration = new TextBlock
+        {
+            Text = Fmt.DurationLong(app.Seconds),
+            FontFamily = Theme.Family,
+            FontSize = Theme.FontValueSm,
+            FontWeight = Microsoft.UI.Text.FontWeights.Bold,
+            Foreground = Theme.TextBrush,
+            HorizontalAlignment = HorizontalAlignment.Right,
+        };
+        _sessions = new TextBlock
+        {
+            Text = SessionText(app.Sessions),
+            FontFamily = Theme.Family,
+            FontSize = Theme.FontSmall,
+            Foreground = Theme.MutedBrush,
+            HorizontalAlignment = HorizontalAlignment.Right,
+            Margin = new Thickness(0, 2, 0, 0),
+        };
+
         var right = new StackPanel
         {
             VerticalAlignment = VerticalAlignment.Center,
             HorizontalAlignment = HorizontalAlignment.Right,
-            Children =
-            {
-                new TextBlock
-                {
-                    Text = Fmt.DurationLong(app.Seconds),
-                    FontFamily = Theme.Family,
-                    FontSize = Theme.FontValueSm,
-                    FontWeight = Microsoft.UI.Text.FontWeights.Bold,
-                    Foreground = Theme.TextBrush,
-                    HorizontalAlignment = HorizontalAlignment.Right,
-                },
-                new TextBlock
-                {
-                    Text = $"{app.Sessions}セッション",
-                    FontFamily = Theme.Family,
-                    FontSize = Theme.FontSmall,
-                    Foreground = Theme.MutedBrush,
-                    HorizontalAlignment = HorizontalAlignment.Right,
-                    Margin = new Thickness(0, 2, 0, 0),
-                },
-            },
+            Children = { _duration, _sessions },
         };
         Grid.SetColumn(right, 3);
         grid.Children.Add(right);
@@ -135,19 +141,39 @@ public sealed class AppUsageRow : UserControl
 
         if (onClick is not null)
         {
+            // ハンドラは作り直さないので、クリック先は今表示しているアプリを都度見る。
             PointerEntered += (_, _) =>
             {
                 card.Background = new SolidColorBrush(Theme.CardHover);
-                ProtectedCursor = Microsoft.UI.Input.InputSystemCursor.Create(
-                    Microsoft.UI.Input.InputSystemCursorShape.Hand);
+                ProtectedCursor = Cursors.Hand;
             };
             PointerExited += (_, _) =>
             {
                 card.Background = Theme.CardBrush;
-                ProtectedCursor = Microsoft.UI.Input.InputSystemCursor.Create(
-                    Microsoft.UI.Input.InputSystemCursorShape.Arrow);
+                ProtectedCursor = Cursors.Arrow;
             };
-            PointerPressed += (_, _) => onClick(app);
+            PointerPressed += (_, _) => onClick(_app);
         }
     }
+
+    /// <summary>
+    /// 数字とバーだけを差し替える。順位と色はアプリの顔ぶれと並びで決まるので、
+    /// それが変わらない限り作り直す必要がない。
+    /// </summary>
+    public void Update(AppUsage app, double peak)
+    {
+        _app = app;
+        _duration.Text = Fmt.DurationLong(app.Seconds);
+        _sessions.Text = SessionText(app.Sessions);
+
+        var ratio = Ratio(app.Seconds, peak);
+        _track.ColumnDefinitions[0].Width = new GridLength(ratio, GridUnitType.Star);
+        _track.ColumnDefinitions[1].Width = new GridLength(1 - ratio, GridUnitType.Star);
+    }
+
+    /// <summary>0でもバーが見えるように下限を置く。</summary>
+    private static double Ratio(double seconds, double peak) =>
+        Math.Max(0.02, Math.Min(1.0, seconds / Math.Max(peak, 1.0)));
+
+    private static string SessionText(int sessions) => $"{sessions}セッション";
 }

@@ -3,17 +3,26 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Shapes;
 using HeatTouls.Core;
+using Windows.UI;
 
 namespace HeatTouls.Controls;
 
 /// <summary>ホームタブの1行: アプリ名 + 合計時間 + そのアプリのヒートマップ。</summary>
 public sealed class AppHeatmapRow : UserControl
 {
+    private readonly TextBlock _total;
+    private readonly Heatmap _heatmap;
+    private readonly Color[] _palette;
+
+    private AppDailyUsage _app;
+
     public AppHeatmapRow(AppDailyUsage app, DateOnly end, int rows = 7, int? cols = null,
                          int? hue = null, Action<AppDailyUsage>? onClick = null)
     {
+        _app = app;
         var appHue = hue ?? Theme.AppHue(app.Name);
         var accent = Theme.Accent(appHue);
+        _palette = Theme.HeatRamp(appHue);
 
         // アプリの色を示す丸いマーク。ヒートマップの色と対応している。
         var chip = new Ellipse
@@ -34,7 +43,7 @@ public sealed class AppHeatmapRow : UserControl
             VerticalAlignment = VerticalAlignment.Center,
         };
 
-        var total = new TextBlock
+        _total = new TextBlock
         {
             Text = Fmt.DurationLong(app.Seconds),
             FontFamily = Theme.Family,
@@ -60,32 +69,48 @@ public sealed class AppHeatmapRow : UserControl
             },
         };
         Grid.SetColumn(left, 0);
-        Grid.SetColumn(total, 1);
+        Grid.SetColumn(_total, 1);
         header.Children.Add(left);
-        header.Children.Add(total);
+        header.Children.Add(_total);
 
         // マスの大きさは概要タブと揃える。濃さはアプリごとに正規化するので、
         // 使用量の少ないアプリでも形が見える。
-        var heatmap = new Heatmap(rows: rows, axis: cols is null, weekdays: true);
-        heatmap.SetData(app.Daily, rows, cols, end, Theme.HeatRamp(appHue));
+        _heatmap = new Heatmap(rows: rows, axis: cols is null, weekdays: true);
+        _heatmap.SetData(app.Daily, rows, cols, end, _palette);
 
-        Content = new StackPanel { Children = { header, heatmap } };
+        Content = new StackPanel { Children = { header, _heatmap } };
 
         if (onClick is not null)
         {
-            left.PointerPressed += (_, _) => onClick(app);
+            // ハンドラは作り直さないので、クリック先は今表示しているアプリを都度見る。
+            left.PointerPressed += (_, _) => onClick(_app);
             left.PointerEntered += (_, _) =>
             {
                 name.Foreground = new SolidColorBrush(accent);
-                ProtectedCursor = Microsoft.UI.Input.InputSystemCursor.Create(
-                    Microsoft.UI.Input.InputSystemCursorShape.Hand);
+                ProtectedCursor = Cursors.Hand;
             };
             left.PointerExited += (_, _) =>
             {
                 name.Foreground = Theme.TextBrush;
-                ProtectedCursor = Microsoft.UI.Input.InputSystemCursor.Create(
-                    Microsoft.UI.Input.InputSystemCursorShape.Arrow);
+                ProtectedCursor = Cursors.Arrow;
             };
         }
     }
+
+    /// <summary>
+    /// 数字とヒートマップだけを差し替える。
+    ///
+    /// 5秒ごとの自動更新で行ごと作り直すと、アプリの数だけ CanvasControl (それぞれが
+    /// 自前のスワップチェーンを持つ) を捨てて作ることになる。顔ぶれが変わっていない
+    /// 限りは行を使い回す。
+    /// </summary>
+    public void Update(AppDailyUsage app, DateOnly end, int rows, int? cols)
+    {
+        _app = app;
+        _total.Text = Fmt.DurationLong(app.Seconds);
+        _heatmap.SetData(app.Daily, rows, cols, end, _palette);
+    }
+
+    /// <summary>一覧から外すときに、キャンバスの後始末を確実に済ませる。</summary>
+    public void Release() => _heatmap.Release();
 }

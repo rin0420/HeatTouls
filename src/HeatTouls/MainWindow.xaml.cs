@@ -57,8 +57,9 @@ public sealed partial class MainWindow : Window
     private TextBlock _appsHeading = null!;
     private StackPanel _appRows = null!;
 
-    // 一覧を作り直したかどうかの判定に使う。5秒ごとの自動更新で毎回組み直すと
-    // スクロール位置が飛び、描き直しも無駄になるため。
+    // 一覧を組み直す必要があるかの判定に使う。数字ではなく「どのアプリがどの順に
+    // 並ぶか」だけを見る。5秒ごとの自動更新で毎回組み直すとスクロール位置が飛ぶうえ、
+    // アプリの数だけキャンバスを捨てて作ることになるため。
     private string? _homeSignature;
     private string? _appsSignature;
     private string? _overviewSignature;
@@ -156,40 +157,58 @@ public sealed partial class MainWindow : Window
         AppWindow.Show();
         Activate();
         Refresh();
+        _timer.Start();
     }
 
     public void HideDashboard()
     {
         AppWindow.Hide();
+        // 誰も見ていない画面を更新し続けない。ここを止めないと、隠したあとも5秒ごとに
+        // 一覧が組み直され、下の ReleaseContent で手放したぶんがすぐ作り直される。
+        _timer.Stop();
         ReleaseContent();
     }
 
     /// <summary>
-    /// Drops everything the dashboard built and gives the memory back.
+    /// 一覧が抱えているものを捨てて、メモリを返す。
     ///
-    /// Hiding a window keeps its whole visual tree alive, and here that tree is one Win2D
-    /// CanvasControl — with its own swap chain — per tracked app. None of it is worth holding
-    /// while the app sits in the tray; ShowDashboard calls Refresh, which rebuilds it.
+    /// ウィンドウを隠してもビジュアルツリーはそのまま残る。ここでのツリーは計測対象の
+    /// アプリ1つにつき Win2D の CanvasControl (それぞれが自前のスワップチェーンを持つ)
+    /// なので、トレイに居る間ずっと抱えておく価値はない。ShowDashboard の Refresh が
+    /// 組み直す。
     /// </summary>
     private void ReleaseContent()
     {
         try
         {
-            _homeBody.Children.Clear();
+            ClearHome();
             _appRows.Children.Clear();
 
-            // Refresh skips rebuilding when the signature is unchanged, so it has to be cleared
-            // or the dashboard would come back empty.
+            // Refresh は署名が変わっていなければ組み直さないので、ここで消しておかないと
+            // next ShowDashboard で空のまま戻ってくる。
             _homeSignature = null;
             _appsSignature = null;
             _overviewSignature = null;
         }
         catch (Exception)
         {
-            // Tearing down the dashboard must never take the tracker down with it.
+            // 画面の後始末で計測まで巻き添えにしない。
         }
 
         MemoryTrim.Release();
+    }
+
+    /// <summary>
+    /// ホームの行を捨てる。Unloaded 頼みだとウィンドウを隠している間に外したぶんの
+    /// キャンバスが取り残されるので、明示的に解放してから外す。
+    /// </summary>
+    private void ClearHome()
+    {
+        foreach (var child in _homeBody.Children)
+        {
+            (child as AppHeatmapRow)?.Release();
+        }
+        _homeBody.Children.Clear();
     }
 
     /// <summary>App.Quit から呼ばれる後始末。</summary>
@@ -487,16 +506,23 @@ public sealed partial class MainWindow : Window
     private void RefreshHome(string rangeKey)
     {
         var apps = Stats.AppDaily(_db, RangeDays[rangeKey]);
-        var signature = rangeKey + "|" +
-            string.Join(",", apps.Select(a => $"{a.Name}:{Math.Round(a.Seconds)}"));
+        var end = Stats.Today();
+        var (rows, cols) = HeatmapGrid[rangeKey];
+
+        // 顔ぶれと並びが同じなら、行はそのままで数字とヒートマップだけ差し替える。
+        var signature = rangeKey + "|" + string.Join(",", apps.Select(a => a.Name));
         if (signature == _homeSignature)
         {
-            return;   // 中身が変わっていないので、スクロール位置を保ったまま何もしない
+            for (var index = 0; index < apps.Count && index < _homeBody.Children.Count; index++)
+            {
+                (_homeBody.Children[index] as AppHeatmapRow)?.Update(apps[index], end, rows, cols);
+            }
+            return;
         }
         var previousRange = _homeSignature?.Split('|', 2)[0];
         _homeSignature = signature;
 
-        _homeBody.Children.Clear();
+        ClearHome();
         if (apps.Count == 0)
         {
             _homeBody.Children.Add(EmptyLabel());
@@ -504,8 +530,6 @@ public sealed partial class MainWindow : Window
             return;
         }
 
-        var end = Stats.Today();
-        var (rows, cols) = HeatmapGrid[rangeKey];
         // 一覧全体で色がかぶらないように色相を割り当てる
         var hues = Theme.AssignHues(apps.Select(a => a.Name));
 
@@ -643,10 +667,20 @@ public sealed partial class MainWindow : Window
             ? $"よく使ったアプリ · {apps.Count}"
             : "よく使ったアプリ";
 
-        var signature = rangeKey + "|" +
-            string.Join(",", apps.Select(a => $"{a.Name}:{Math.Round(a.Seconds)}:{a.Sessions}"));
+        var peak = apps.Count > 0 ? apps.Max(a => a.Seconds) : 0.0;
+        if (peak <= 0)
+        {
+            peak = 1.0;
+        }
+
+        // ホームと同じで、顔ぶれと並びが同じなら中身だけ差し替える。
+        var signature = rangeKey + "|" + string.Join(",", apps.Select(a => a.Name));
         if (signature == _appsSignature)
         {
+            for (var index = 0; index < apps.Count && index < _appRows.Children.Count; index++)
+            {
+                (_appRows.Children[index] as AppUsageRow)?.Update(apps[index], peak);
+            }
             return;
         }
         _appsSignature = signature;
@@ -658,11 +692,6 @@ public sealed partial class MainWindow : Window
             return;
         }
 
-        var peak = apps.Max(a => a.Seconds);
-        if (peak <= 0)
-        {
-            peak = 1.0;
-        }
         for (var index = 0; index < apps.Count; index++)
         {
             _appRows.Children.Add(new AppUsageRow(

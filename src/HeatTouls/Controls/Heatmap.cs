@@ -45,6 +45,7 @@ public sealed class Heatmap : UserControl
     private readonly bool _weekdays;
 
     private Geometry? _geometry;
+    private bool _released;
 
     private readonly record struct Geometry(
         double Cell, double Step, int Count, DateOnly Start,
@@ -70,11 +71,25 @@ public sealed class Heatmap : UserControl
         }
 
         SizeChanged += (_, _) => Relayout();
-        Unloaded += (_, _) =>
+        Unloaded += (_, _) => Release();
+    }
+
+    /// <summary>
+    /// CanvasControl とその裏のスワップチェーンを手放す。
+    ///
+    /// Win2D のキャンバスはデバイス消失イベントに自分を繋いだままにするので、親から
+    /// 外しただけでは解放されない。Unloaded 頼みにすると、ウィンドウを隠している間に
+    /// 一覧を捨てたぶんが取り残されるため、捨てる側から直接呼べるようにしておく。
+    /// </summary>
+    public void Release()
+    {
+        if (_released)
         {
-            _tooltip?.Hide();
-            _canvas.RemoveFromVisualTree();
-        };
+            return;
+        }
+        _released = true;
+        _tooltip?.Hide();
+        _canvas.RemoveFromVisualTree();
     }
 
     /// <summary>
